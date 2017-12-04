@@ -1,7 +1,7 @@
 Package.describe({
   name: "nooitaf:spiderable",
-  summary: "Makes the application crawlable to web spiders.",
-  version: "1.0.1",
+  summary: "Makes app crawlable to web spiders.",
+  version: "1.0.2",
   // URL to the Git repository containing the source code for this package.
   git: 'https://github.com/nooitaf/meteor-spiderable.git',
   // By default, Meteor will default to using README.md for documentation.

@@ -99,7 +99,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
         if (code === 0 && /<html/i.test(stdout)) {
           // TODO - make optional
           console.log("Spiderable: " + url.toString())
-          console.log("User-Agent: " + req.headers['user-agent'].toString()) 
+          // console.log("User-Agent: " + req.headers['user-agent'].toString()) 
           res.writeHead(200, {
             'Content-Type': 'text/html; charset=UTF-8'
           });
