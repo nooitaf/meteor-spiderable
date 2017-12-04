@@ -1,7 +1,7 @@
 Package.describe({
   name: "nooitaf:spiderable",
   summary: "Makes app crawlable to web spiders.",
-  version: "1.0.2",
+  version: "1.0.9",
   // URL to the Git repository containing the source code for this package.
   git: 'https://github.com/nooitaf/meteor-spiderable.git',
   // By default, Meteor will default to using README.md for documentation.
@@ -9,17 +9,16 @@ Package.describe({
   documentation: 'README.md'
 });
 
-Npm.depends({
-  "phantomjs-prebuilt": "2.1.16"
-});
-
 Package.onUse(function (api) {
   api.versionsFrom('1.6');
+  api.use('ecmascript');
   api.use('webapp@1.4.0', 'server');
   api.use(['ddp@1.4.0', 'tracker@1.1.3'], 'client');
   api.use(['callback-hook@1.0.10'], 'client');
+
   api.use(['templating@1.3.2'], 'client');
   api.use(['underscore@1.0.10'], ['client', 'server']);
+  api.use('tmeasday:check-npm-versions@0.3.1');
 
   api.export('Spiderable');
 

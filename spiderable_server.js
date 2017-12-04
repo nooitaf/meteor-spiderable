@@ -1,9 +1,13 @@
 var fs = Npm.require('fs');
-var phantom = Npm.require('phantomjs-prebuilt');
+// var phantom = Npm.require('phantomjs-prebuilt');
 var child_process = Npm.require('child_process');
 var querystring = Npm.require('querystring');
 var urlParser = Npm.require('url');
 var path = Npm.require('path');
+
+import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
+checkNpmVersions({ 'phantomjs-prebuilt': '>=2.1.16' }, 'nooitaf:spiderable');
+const phantom = require('phantomjs-prebuilt');
 
 // list of bot user agents that we want to serve statically, but do
 // not obey the _escaped_fragment_ protocol. The page is served
@@ -99,7 +103,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
         if (code === 0 && /<html/i.test(stdout)) {
           // TODO - make optional
           console.log("Spiderable: " + url.toString())
-          // console.log("User-Agent: " + req.headers['user-agent'].toString()) 
+          // console.log("User-Agent: " + req.headers['user-agent'].toString())
           res.writeHead(200, {
             'Content-Type': 'text/html; charset=UTF-8'
           });

@@ -2,9 +2,21 @@
 Revival fork of [https://github.com/meteor/meteor/packages/deprecated/spiderable](https://github.com/meteor/meteor/packages/deprecated/spiderable)
 
 Meteor v1.6+ only (as of expected lack of time for legacy testing)
-Uses `phantomjs-prebuilt@2.1.16` so you don't need to install phantomjs on the server
+Uses `phantomjs-prebuilt@2.1.16` so you don't need to install or build phantomjs on the server
 and "npm native" `phantom.exec()` instead of the earlier `bash -c exec` and `stdin` hack
 > At the moment this means your build will increase by about 64MB (sad ya. see todo :P)
+
+
+## Install
+Add the meteor package
+```js
+meteor add nooitaf:spiderable
+```
+
+Add the npm package from `phantomjs-prebuilt` to your project `>=v2.1.16`
+```js
+meteor npm install phantomjs-prebuilt --save
+```
 
 ## About
 `spiderable` is part of [Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp). It's one possible way to allow web search engines to index a Meteor application. It uses the [AJAX Crawling specification](https://developers.google.com/webmasters/ajax-crawling/) published by Google to serve HTML to compatible spiders (Google, Bing, Yandex, and more).
