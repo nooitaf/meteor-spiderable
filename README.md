@@ -1,4 +1,4 @@
-# spiderable
+# spiderable WIP
 Revival fork of [https://github.com/meteor/meteor/packages/deprecated/spiderable](https://github.com/meteor/meteor/packages/deprecated/spiderable)
 
 Meteor v1.6+ only (as of expected lack of time for legacy testing)
