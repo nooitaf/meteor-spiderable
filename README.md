@@ -1,5 +1,5 @@
 # spiderable
-[Revival Fork of](https://github.com/meteor/meteor/packages/deprecated/spiderable)
+Revival fork of [https://github.com/meteor/meteor/packages/deprecated/spiderable](https://github.com/meteor/meteor/packages/deprecated/spiderable)
 
 Meteor v1.6+ only (as of expected lack of time for legacy testing)
 Uses `phantomjs-prebuilt@2.1.16` so you don't need to install phantomjs on the server
