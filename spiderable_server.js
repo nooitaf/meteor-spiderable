@@ -100,7 +100,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
       return re.test(req.headers['user-agent']);
     })) {
 
-    var url = process.env.SPIDERABLE_URL || Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
+    var url = Spiderable._urlForPhantom(process.env.SPIDERABLE_URL || Meteor.absoluteUrl(), req.url);
     var program = phantom.exec(
       // "--debug=true",
       "--cookies-file=/tmp/phamtom-cookies_"+ new Date().getTime(),
