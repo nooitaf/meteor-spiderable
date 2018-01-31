@@ -1,13 +1,12 @@
 var fs = Npm.require('fs');
-// var phantom = Npm.require('phantomjs-prebuilt');
+var phantom = Npm.require('phantomjs-prebuilt');
 var child_process = Npm.require('child_process');
 var querystring = Npm.require('querystring');
 var urlParser = Npm.require('url');
 var path = Npm.require('path');
 
-import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
-checkNpmVersions({ 'phantomjs-prebuilt': '>=2.1.16' }, 'nooitaf:spiderable');
-const phantom = require('phantomjs-prebuilt');
+// import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
+// checkNpmVersions({ 'phantomjs-prebuilt': '>=2.1.16' }, 'nooitaf:spiderable');
 
 // list of bot user agents that we want to serve statically, but do
 // not obey the _escaped_fragment_ protocol. The page is served
@@ -19,11 +18,40 @@ const phantom = require('phantomjs-prebuilt');
 // the _escaped_fragment_ protocol, so we need to hardcode a list
 // here. I shed a silent tear.
 Spiderable.userAgentRegExps = [
-  /^facebookexternalhit/i,
-  /^Facebot/,
-  /^linkedinbot/i,
-  /^twitterbot/i,
-  /^slackbot-linkexpanding/i
+  /360spider/i,
+  /adsbot-google/i,
+  /ahrefsbot/i,
+  /applebot/i,
+  /baiduspider/i,
+  /bingbot/i,
+  /duckduckbot/i,
+  /facebookbot/i,
+  /facebookexternalhit/i,
+  /google-structured-data-testing-tool/i,
+  /googlebot/i,
+  /instagram/i,
+  /kaz\.kz_bot/i,
+  /linkedinbot/i,
+  /mail\.ru_bot/i,
+  /mediapartners-google/i,
+  /mj12bot/i,
+  /msnbot/i,
+  /msrbot/i,
+  /oovoo/i,
+  /orangebot/i,
+  /pinterest/i,
+  /redditbot/i,
+  /sitelockspider/i,
+  /skypeuripreview/i,
+  /slackbot/i,
+  /sputnikbot/i,
+  /tweetmemebot/i,
+  /twitterbot/i,
+  /viber/i,
+  /vkshare/i,
+  /whatsapp/i,
+  /yahoo/i,
+  /yandex/i
 ];
 
 // how long to let phantomjs run before we kill it (and send down the
@@ -72,20 +100,20 @@ WebApp.connectHandlers.use(function(req, res, next) {
       return re.test(req.headers['user-agent']);
     })) {
 
-    var url = Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
-
+    var url = process.env.SPIDERABLE_URL || Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
     var program = phantom.exec(
       // "--debug=true",
-      "--cookies-file=/tmp/phamtom-cookies",
+      "--cookies-file=/tmp/phamtom-cookies_"+ new Date().getTime(),
       "--disk-cache=true",
-      "--disk-cache-path=/tmp",
+      "--disk-cache-path=/tmp/phantom-cache",
       "--ignore-ssl-errors=true",
       "--load-images=no",
-      "--local-storage-path=/tmp",
-      "--local-url-access=true",
-      "--local-to-remote-url-access=true",
+      "--local-storage-path=/tmp/phantom-local-starage",
+      "--local-url-access=false",
+      "--local-to-remote-url-access=false",
       "--max-disk-cache-size=50000",
       "--web-security=false",
+      "--debug=false",
       PHANTOM_SCRIPT_PATH,
       url
       )

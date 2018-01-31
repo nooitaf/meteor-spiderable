@@ -18,6 +18,11 @@ Add the npm package from `phantomjs-prebuilt` to your project `>=v2.1.16`
 meteor npm install phantomjs-prebuilt --save
 ```
 
+You can use the `SPIDERABLE_URL` environment variable to overwrite the absolute url
+```bash
+export SPIDERABLE_URL="http://localhost:4000"
+```
+
 ## About
 `spiderable` is part of [Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp). It's one possible way to allow web search engines to index a Meteor application. It uses the [AJAX Crawling specification](https://developers.google.com/webmasters/ajax-crawling/) published by Google to serve HTML to compatible spiders (Google, Bing, Yandex, and more).
 
