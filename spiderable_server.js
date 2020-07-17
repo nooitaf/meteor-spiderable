@@ -1,6 +1,5 @@
 var fs = Npm.require('fs');
-var phantom = Npm.require('phantomjs-prebuilt');
-var child_process = Npm.require('child_process');
+var puppeteer = Npm.require('puppeteer');
 var querystring = Npm.require('querystring');
 var urlParser = Npm.require('url');
 var path = Npm.require('path');
@@ -90,58 +89,82 @@ Spiderable._urlForPhantom = function(siteAbsoluteUrl, requestUrl) {
   return urlParser.format(parsedAbsoluteUrl);
 };
 
-var PHANTOM_SCRIPT_PATH = Assets.absoluteFilePath("phantom_script.js");
 
-WebApp.connectHandlers.use(function(req, res, next) {
+WebApp.connectHandlers.use(async function(req, res, next) {
+  const promises = []
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
   // https://developers.google.com/webmasters/ajax-crawling/docs/specification
   if (/\?.*_escaped_fragment_=/.test(req.url) ||
     _.any(Spiderable.userAgentRegExps, function(re) {
       return re.test(req.headers['user-agent']);
     })) {
+    
+    var url = process.env.SPIDERABLE_URL || Meteor.absoluteUrl()
+    url = url + req.url.substr(1)
+    url = url.replace('?_escaped_fragment_=', '')
+    
+    console.log("Spiderable:", url)
+    const browser = await puppeteer.launch({
+      // headless: false
+    })
 
-    var url = Spiderable._urlForPhantom(process.env.SPIDERABLE_URL || Meteor.absoluteUrl(), req.url);
-    var program = phantom.exec(
-      // "--debug=true",
-      "--cookies-file=/tmp/phamtom-cookies_"+ new Date().getTime(),
-      "--disk-cache=true",
-      "--disk-cache-path=/tmp/phantom-cache",
-      "--ignore-ssl-errors=true",
-      "--load-images=no",
-      "--local-storage-path=/tmp/phantom-local-starage",
-      "--local-url-access=false",
-      "--local-to-remote-url-access=false",
-      "--max-disk-cache-size=50000",
-      "--web-security=false",
-      "--debug=false",
-      PHANTOM_SCRIPT_PATH,
-      url
-      )
 
-    var stdout = ""
-    program.stdout.on('data', Meteor.bindEnvironment(function(data){
-      // console.log("{std out} ",data.toString('utf8'));
-      stdout += data.toString('utf8')
-    }))
-    program.stderr.on('data', Meteor.bindEnvironment(function(data){
-      console.log("{std err} ",data.toString('utf8'));
-    }))
-    program.on('exit', Meteor.bindEnvironment(
-      function(code){
-        if (code === 0 && /<html/i.test(stdout)) {
-          // TODO - make optional
-          console.log("Spiderable: " + url.toString())
-          // console.log("User-Agent: " + req.headers['user-agent'].toString())
-          res.writeHead(200, {
-            'Content-Type': 'text/html; charset=UTF-8'
-          });
-          res.end(stdout);
-        } else {
-          Meteor._debug("spiderable: phantomjs failed at " + url + ":", code, stdout);
-          next();
+    const page = await browser.newPage()
+    await page.goto(url)
+    
+    try {
+      await page.waitFor(function(){
+        if (typeof Meteor === 'undefined'
+          || Meteor.status === undefined
+          || !Meteor.status().connected) {
+          return false;
         }
+        // return true
+        if (typeof Tracker === 'undefined'
+            || Tracker.flush === undefined) {
+          return false;
+        }
+        if (typeof DDP === 'undefined'
+            || DDP._allSubscriptionsReady === undefined) {
+          return false;
+        }
+        Tracker.flush()
+        return DDP._allSubscriptionsReady()
+      },{
+        timeout: process.env.SPIDERABLE_TIMEOUT || 2000
       })
-    )
+
+      const html = await page.content()
+      await browser.close()
+      
+      if (/<!DOC/i.test(html)) {
+        // TODO - make optional
+        console.log("Spiderable [finished]: " + url.toString())
+        
+        // replace nonsense
+        var out = html;
+        out = out.replace(/<script[^>]+>(.|\n|\r)*?<\/script\s*>/ig, '');
+        out = out.replace('<meta name="fragment" content="!">', '');
+        
+        // console.log("User-Agent: " + req.headers['user-agent'].toString())
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=UTF-8'
+        });
+        res.end(out);
+      } else {
+        console.log('no html')
+        Meteor._debug("spiderable: puppeteer failed at " + url + ":");
+        next();
+      }
+
+    } catch (e) {
+      console.log('puppeteer failed:', url, e)
+      await browser.close()
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=UTF-8'
+      });
+      res.end('...')
+    } 
   } else {
     next();
   }

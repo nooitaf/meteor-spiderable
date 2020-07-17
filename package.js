@@ -1,7 +1,7 @@
 Package.describe({
   name: "nooitaf:spiderable",
-  summary: "Makes app crawlable to web spiders.",
-  version: "1.0.12",
+  summary: "Makes app crawlable to web spiders using googles puppeteer.",
+  version: "2.0.0",
   // URL to the Git repository containing the source code for this package.
   git: 'https://github.com/nooitaf/meteor-spiderable.git',
   // By default, Meteor will default to using README.md for documentation.
@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'phantomjs-prebuilt':'2.1.16'
+  'puppeteer':'5.2.0'
 })
 
 Package.onUse(function (api) {
@@ -31,11 +31,5 @@ Package.onUse(function (api) {
   api.addFiles('spiderable_server.js', 'server');
   api.addFiles('spiderable_client.js', 'client');
 
-  api.addAssets('phantom_script.js', 'server');
 });
 
-Package.onTest(function (api) {
-  api.use(['spiderable', 'tinytest', 'underscore', 'ddp']);
-  api.addFiles('spiderable_client_tests.js', 'client');
-  api.addFiles('spiderable_server_tests.js', 'server');
-});
