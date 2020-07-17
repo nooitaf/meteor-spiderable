@@ -1,6 +1,8 @@
 # spiderable WIP
-Meteor v1.6+ only (as of expected lack of time for legacy testing)
-Uses `puppeteer` 
+Meteor v1.6+  
+Uses googles `puppeteer` 
+  
+It works great, but code is messy :P
 
 ## Install
 Add the meteor package
@@ -13,9 +15,13 @@ Add the npm package from `puppeteer` to your project `>=v5.2.0`
 meteor npm i puppeteer --save
 ```
 
-You can use the `SPIDERABLE_URL` environment variable to overwrite the default `http://localhost:3000`
+## Evironment vars
+You can optionaly use the URL to point to a different port, ip or domain.
+
 ```bash
-export SPIDERABLE_URL="http://localhost:4000/"
+# default values
+export SPIDERABLE_URL="http://localhost:3000/"
+export SPIDERABLE_TIMEOUT=2000
 ```
 
 ## About
@@ -27,8 +33,5 @@ In order to have links between multiple pages on a site visible to spiders, apps
 
 When running your page, `spiderable` will wait for all publications to be ready. Make sure that all of your [`publish functions`](#meteor_publish) either return a cursor (or an array of cursors), or eventually call [`this.ready()`](#publish_ready). Otherwise, the `phantomjs` executions will fail.
 
-## Requirements
-
-
-## Howto see it's working
-Open your page with `http://localhost:3000/?_escaped_fragment_=`
+## Howto see if it's working
+Open your page with `http://localhost:3000/?_escaped_fragment_=` should return full html.
