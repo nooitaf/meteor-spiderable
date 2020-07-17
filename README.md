@@ -1,6 +1,6 @@
 # spiderable WIP
 Meteor v1.6+  
-Uses googles `puppeteer` 
+Uses google's [puppeteer](https://pptr.dev/)
   
 It works great, but code is messy :P
 
@@ -31,7 +31,7 @@ When a spider requests an HTML snapshot of a page the Meteor server runs the cli
 
 In order to have links between multiple pages on a site visible to spiders, apps must use real links (eg `<a href="/about">`) rather than simply re-rendering portions of the page when an element is clicked. Apps should render their content based on the URL of the page and can use [HTML5 pushState](https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser_history) to alter the URL on the client without triggering a page reload. See the [Todos example](http://meteor.com/examples/todos) for a demonstration.
 
-When running your page, `spiderable` will wait for all publications to be ready. Make sure that all of your [`publish functions`](#meteor_publish) either return a cursor (or an array of cursors), or eventually call [`this.ready()`](#publish_ready). Otherwise, the `phantomjs` executions will fail.
+When running your page, `spiderable` will wait for all publications to be ready. Make sure that all of your [`publish functions`](#meteor_publish) either return a cursor (or an array of cursors), or eventually call [`this.ready()`](#publish_ready). Otherwise, the `puppeteer` executions will timeout.
 
 ## Howto see if it's working
 Open your page with `http://localhost:3000/?_escaped_fragment_=` should return full html.
