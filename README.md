@@ -10,11 +10,6 @@ Add the meteor package
 meteor add nooitaf:spiderable
 ```
 
-Add the npm package from `puppeteer` to your project `>=v5.2.0`
-```js
-meteor npm i puppeteer --save
-```
-
 ## Evironment vars
 You can optionaly use the URL to point to a different port, ip or domain.
 
