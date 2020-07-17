@@ -105,9 +105,9 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     
     console.log("Spiderable:", url)
     const browser = await puppeteer.launch({
-      // headless: false
+      args: process.env.SPIDERABLE_ARGS ? JSON.parse(process.env.SPIDERABLE_ARGS) : [],
+      headless: !!process.env.SPIDERABLE_HEADLESS || false
     })
-
 
     const page = await browser.newPage()
     await page.goto(url)

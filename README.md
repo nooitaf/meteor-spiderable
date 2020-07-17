@@ -11,12 +11,15 @@ meteor add nooitaf:spiderable
 ```
 
 ## Evironment vars
-You can optionaly use the URL to point to a different port, ip or domain.
+You can optionaly use the URL to point to a different port, ip or domain.  
+Default URL is `http://localhost:3000/`.  
 
 ```bash
-# default values
-export SPIDERABLE_URL="http://localhost:3000/"
-export SPIDERABLE_TIMEOUT=2000
+# examples
+export SPIDERABLE_URL="http://localhost:3000/" # default
+export SPIDERABLE_TIMEOUT=2000                 # default
+export SPIDERABLE_HEADLESS=0                   # 1=enable; 0=disable (default)
+export SPIDERABLE_ARGS="['--disable-dev-shm-usage','--no-sandbox']"  # docker
 ```
 
 ## About
