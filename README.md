@@ -18,8 +18,24 @@ Default URL is `http://localhost:3000/`.
 # examples
 export SPIDERABLE_URL="http://localhost:3000/" # default
 export SPIDERABLE_TIMEOUT=2000                 # default
-export SPIDERABLE_HEADLESS=0                   # 1=enable; 0=disable (default)
-export SPIDERABLE_ARGS="['--disable-dev-shm-usage','--no-sandbox']"  # docker
+export SPIDERABLE_HEADLESS=1                   # 0=headfull; 1=headless (default)
+export SPIDERABLE_ARGS='["--disable-dev-shm-usage","--no-sandbox"]'  # docker
+```
+
+## Howto see if it's working
+Open your page with `http://localhost:3000/?_escaped_fragment_=` should return full html.
+
+## Docker
+To use in docker you need to add this to your Dockerfile
+```Dockerfile
+RUN apt-get update \
+    && apt-get install -y wget gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-unstable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+      --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 ```
 
 ## About
@@ -30,6 +46,3 @@ When a spider requests an HTML snapshot of a page the Meteor server runs the cli
 In order to have links between multiple pages on a site visible to spiders, apps must use real links (eg `<a href="/about">`) rather than simply re-rendering portions of the page when an element is clicked. Apps should render their content based on the URL of the page and can use [HTML5 pushState](https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser_history) to alter the URL on the client without triggering a page reload. See the [Todos example](http://meteor.com/examples/todos) for a demonstration.
 
 When running your page, `spiderable` will wait for all publications to be ready. Make sure that all of your [`publish functions`](#meteor_publish) either return a cursor (or an array of cursors), or eventually call [`this.ready()`](#publish_ready). Otherwise, the `puppeteer` executions will timeout.
-
-## Howto see if it's working
-Open your page with `http://localhost:3000/?_escaped_fragment_=` should return full html.
