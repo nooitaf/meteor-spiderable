@@ -103,13 +103,34 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     url = url + req.url.substr(1)
     url = url.replace('?_escaped_fragment_=', '')
     
-    console.log("Spiderable:", url)
+    // return 404 if crawler requests an image or document
+    let isImage = /\.(jpg|png|pdf|jpeg|gif|doc)/i.test(url)
+    if (isImage) {
+      res.writeHead(404, {
+        'Content-Type': 'text/html'
+      });
+      return res.end('page not found')
+    }
+    
+    console.log("Spiderable:", process.env.SPIDERABLE_SHOW_HEADERS ? req.headers : url)
     const browser = await puppeteer.launch({
       args: process.env.SPIDERABLE_ARGS ? JSON.parse(process.env.SPIDERABLE_ARGS) : [],
       headless: !!process.env.SPIDERABLE_HEADLESS || true
     })
 
     const page = await browser.newPage()
+    page.setDefaultTimeout(process.env.SPIDERABLE_TIMEOUT || 2000)
+    
+    // don't load images
+    await page.setRequestInterception(true)
+    page.on('request', function(preq){
+      if (preq.resourceType() === 'image') {
+        preq.abort()
+      } else {
+        preq.continue()
+      }
+    })
+    
     await page.goto(url)
     
     try {
@@ -130,8 +151,6 @@ WebApp.connectHandlers.use(async function(req, res, next) {
         }
         Tracker.flush()
         return DDP._allSubscriptionsReady()
-      },{
-        timeout: process.env.SPIDERABLE_TIMEOUT || 2000
       })
 
       const html = await page.content()
