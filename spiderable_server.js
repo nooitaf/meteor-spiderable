@@ -104,7 +104,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     url = url.replace('?_escaped_fragment_=', '')
     
     // return 404 if crawler requests an image or document
-    let isImage = /\.(jpg|png|pdf|jpeg|gif|doc)/i.test(url)
+    let isImage = /\.(jpg|png|pdf|jpeg|gif|doc|ico)/i.test(url)
     if (isImage) {
       res.writeHead(404, {
         'Content-Type': 'text/html'
