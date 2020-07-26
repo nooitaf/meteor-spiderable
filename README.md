@@ -20,6 +20,7 @@ export SPIDERABLE_URL="http://localhost:3000/" # default
 export SPIDERABLE_TIMEOUT=2000                 # default
 export SPIDERABLE_HEADLESS=1                   # 0=headfull; 1=headless (default)
 export SPIDERABLE_ARGS='["--disable-dev-shm-usage","--no-sandbox"]'  # docker
+export SPIDERABLE_SHOW_HEADERS=0               # 0=only url (default); 1=full spider request header
 ```
 
 ## Howto see if it's working
