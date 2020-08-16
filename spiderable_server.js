@@ -4,6 +4,7 @@ var querystring = Npm.require('querystring');
 var urlParser = Npm.require('url');
 var path = Npm.require('path');
 const ps = require('ps-node-promise-es6');
+var exec = require('child-process-promise').exec;
 
 // import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
 // checkNpmVersions({ 'phantomjs-prebuilt': '>=2.1.16' }, 'nooitaf:spiderable');
@@ -91,6 +92,7 @@ Spiderable._urlForPhantom = function(siteAbsoluteUrl, requestUrl) {
 };
 
 
+
 WebApp.connectHandlers.use(async function(req, res, next) {
   const promises = []
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
@@ -115,121 +117,161 @@ WebApp.connectHandlers.use(async function(req, res, next) {
       return res.end('page not found')
     }
     
-
-
-    const browser = await puppeteer.launch({
-      timeout: process.env.SPIDERABLE_TIMEOUT || 2000,
-      args: process.env.SPIDERABLE_ARGS ? JSON.parse(process.env.SPIDERABLE_ARGS) : [],
-      headless: parseInt(process.env.SPIDERABLE_HEADLESS) || true
-    })
     
-    const browserPID = browser._process.pid
-
-    console.time("Spiderable ["+browserPID+"]")
-    // console.log('Spiderable [PID]', browser._process.pid)
-    console.log("Spiderable ["+browserPID+"] [START] " + url.toString())
-    if (parseInt(process.env.SPIDERABLE_SHOW_HEADERS)){
-      console.log("Spiderable [HEADERS]", req.headers)
-    }
     
-    try {
-      
-      const page = await browser.newPage()
-      page.setDefaultTimeout(process.env.SPIDERABLE_TIMEOUT || 2000)
-      
-      // don't load images
-      await page.setRequestInterception(true)
-      page.on('request', function(preq){
-        if (preq.resourceType() === 'image') {
-          preq.abort()
-        } else {
-          preq.continue()
-        }
-      })
-      page.on('error', function(preq1,preq2){
-        console.log('ERROR:',preq1,preq2)
-        page.close()
-        browser.close()
-        res.writeHead(404, {
-          'Content-Type': 'text/html'
-        });
-        return res.end('page not found')
-      })
-      
-      await page.goto(url)
-      
-      try {
-        await page.waitFor(function(){
-          if (typeof Meteor === 'undefined'
-            || Meteor.status === undefined
-            || !Meteor.status().connected) {
-            return false;
-          }
-          // return true
-          if (typeof Tracker === 'undefined'
-              || Tracker.flush === undefined) {
-            return false;
-          }
-          if (typeof DDP === 'undefined'
-              || DDP._allSubscriptionsReady === undefined) {
-            return false;
-          }
-          Tracker.flush()
-          return DDP._allSubscriptionsReady()
-        })
-
-        const html = await page.content()
-        await page.close()
-        await browser.close()
-        
-        if (/<!DOC/i.test(html)) {
-          // TODO - make optional
-          console.log("Spiderable ["+browserPID+"] [FINISHED] " + url.toString())
+    let processCount = 0
+    
+    await exec("ps aux | grep -v -E 'grep' | grep puppet --count | tr '\n' ' '")
+      .then(function (result) {
+          var stdout = result.stdout;
+          var stderr = result.stderr;
+          // console.log('stdout: ', stdout);
+          processCount = parseInt(stdout)
           
-          // replace nonsense
-          var out = html;
-          out = out.replace(/<script[^>]+>(.|\n|\r)*?<\/script\s*>/ig, '');
-          out = out.replace('<meta name="fragment" content="!">', '');
-          
-          // console.log("User-Agent: " + req.headers['user-agent'].toString())
-          res.writeHead(200, {
-            'Content-Type': 'text/html; charset=UTF-8'
-          });
-          res.end(out);
-        } else {
-          console.log('no html')
-          Meteor._debug("spiderable: puppeteer failed at " + url + ":");
-          next();
-        }
+          console.log('stderr: ', stderr);
+      })
+      .catch(function (err) {
+          console.error('ERROR: ', err);
+      });
+    
+    console.log('Spiderable [PROCESS COUNT]', processCount)
+    
+    if (processCount > 1) {
+      console.log('Spiderable [MAX REFUSE]')
 
-      } catch (e) {
-        await page.close()
-        throw "fail"
-      } 
-
-
-    } catch (e) {
-
-      console.log("Spiderable ["+browserPID+"] [ERROR]", browserPID)
       res.writeHead(404, {
         'Content-Type': 'text/html'
       });
       return res.end('page not found')
+
+    }
+    
+    
+    try {
+
+      const browser = await puppeteer.launch({
+        timeout: parseInt(process.env.SPIDERABLE_TIMEOUT) || 2000,
+        args: process.env.SPIDERABLE_ARGS ? JSON.parse(process.env.SPIDERABLE_ARGS) : [],
+        headless: parseInt(process.env.SPIDERABLE_HEADLESS) || true
+      })
       
-    } finally {
+      const browserPID = browser._process.pid
 
-      console.log('Spiderable ['+browserPID+'] [CLEANUP]')
-      await browser.close();
-      const psLookup = await ps.lookup({ pid: browserPID });
-
-      for (let proc of psLookup) {
-        if (_.has(proc, 'pid')) {
-          await ps.kill(proc.pid, 'SIGKILL');
-        }
+      console.time("Spiderable ["+browserPID+"]")
+      // console.log('Spiderable [PID]', browser._process.pid)
+      console.log("Spiderable ["+browserPID+"] [START] " + url.toString())
+      if (parseInt(process.env.SPIDERABLE_SHOW_HEADERS)){
+        console.log("Spiderable [HEADERS]", req.headers)
       }
-      console.timeEnd("Spiderable ["+browserPID+"]")
+      
+      try {
+        
+        const page = await browser.newPage()
+        await page.setDefaultTimeout(parseInt(process.env.SPIDERABLE_TIMEOUT)|| 2000)
+        await page.setCacheEnabled(false)
+        // don't load images
+        await page.setRequestInterception(true)
+        page.on('request', function(preq){
+          if (preq.resourceType() === 'image') {
+            preq.abort()
+          } else {
+            preq.continue()
+          }
+        })
+        page.on('error', function(preq1,preq2){
+          console.log('ERROR:',preq1,preq2)
+          page.close()
+          browser.close()
+          res.writeHead(404, {
+            'Content-Type': 'text/html'
+          });
+          return res.end('page not found')
+        })
+        
+        await page.goto(url)
+        
+        try {
+          await page.waitFor(function(){
+            if (typeof Meteor === 'undefined'
+              || Meteor.status === undefined
+              || !Meteor.status().connected) {
+              return false;
+            }
+            // return true
+            if (typeof Tracker === 'undefined'
+                || Tracker.flush === undefined) {
+              return false;
+            }
+            if (typeof DDP === 'undefined'
+                || DDP._allSubscriptionsReady === undefined) {
+              return false;
+            }
+            Tracker.flush()
+            return DDP._allSubscriptionsReady()
+          })
+
+          const html = await page.content()
+          await page.close()
+          await browser.close()
+          
+          if (/<!DOC/i.test(html)) {
+            // TODO - make optional
+            console.log("Spiderable ["+browserPID+"] [FINISHED] " + url.toString())
+            
+            // replace nonsense
+            var out = html;
+            out = out.replace(/<script[^>]+>(.|\n|\r)*?<\/script\s*>/ig, '');
+            out = out.replace('<meta name="fragment" content="!">', '');
+            
+            // console.log("User-Agent: " + req.headers['user-agent'].toString())
+            res.writeHead(200, {
+              'Content-Type': 'text/html; charset=UTF-8'
+            });
+            res.end(out);
+          } else {
+            console.log('no html')
+            Meteor._debug("spiderable: puppeteer failed at " + url + ":");
+            next();
+          }
+
+        } catch (e) {
+          await page.close()
+          throw "fail"
+        } 
+
+
+      } catch (e) {
+
+        console.log("Spiderable ["+browserPID+"] [ERROR]", browserPID)
+        res.writeHead(404, {
+          'Content-Type': 'text/html'
+        });
+        return res.end('page not found')
+        
+      } finally {
+
+        console.log('Spiderable ['+browserPID+'] [CLEANUP]')
+
+        await browser.close();
+        
+        const psLookupFinal = await ps.lookup({ pid: browserPID });
+        
+        for (let proc of psLookupFinal) {
+          if (_.has(proc, 'pid')) {
+            await ps.kill(proc.pid, 'SIGKILL');
+          }
+        }
+        console.timeEnd("Spiderable ["+browserPID+"]")
+        
+      }
+      
+    } catch (e) {
+      console.log('SPIRABLE --- MAIN ERROR', e)
+    } finally {
       
     }
+
+
     
   } else {
     next();
