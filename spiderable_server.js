@@ -6,6 +6,9 @@ var path = Npm.require('path');
 const ps = require('ps-node-promise-es6');
 var exec = require('child-process-promise').exec;
 
+
+SpiderableCache = new Mongo.Collection('spidercache')
+
 // import { checkNpmVersions } from 'meteor/tmeasday:check-npm-versions';
 // checkNpmVersions({ 'phantomjs-prebuilt': '>=2.1.16' }, 'nooitaf:spiderable');
 
@@ -106,7 +109,26 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     var url = process.env.SPIDERABLE_URL || Meteor.absoluteUrl()
     url = url + req.url.substr(1)
     url = url.replace('?_escaped_fragment_=', '')
+    
+    let sitemap_url = process.env.SPIDERABLE_SITEMAP || 'http://localhost:3000/sitemap.xml'
+    if (url === sitemap_url) {
+      console.log("SITEMAP PULL")
 
+      await exec("curl " + sitemap_url)
+        .then(function (result) {
+            var stdout = result.stdout;
+            var stderr = result.stderr;
+            let sitemap = String(stdout)
+            res.writeHead(200, {
+              'Content-Type': 'text/xml; charset=UTF-8'
+            });
+            return res.end(sitemap);
+        })
+        .catch(function (err) {
+            console.error('SITEMAP PULL ERROR: ', err);
+        });
+      return true;
+    }
     
     // return 404 if crawler requests an image or document
     let isImage = /\.(jpg|png|pdf|jpeg|gif|doc|ico)/i.test(url)
@@ -117,6 +139,28 @@ WebApp.connectHandlers.use(async function(req, res, next) {
       return res.end('page not found')
     }
     
+    let now = new Date().valueOf()
+    let maxAge = process.env.SPIDERABLE_CACHETIME || 1000 * 60 * 60
+    console.log("Spiderable [CACHE] max time: " + Math.floor(maxAge / 1000 / 60) + " minutes")
+    let cached = SpiderableCache.findOne({url:url})
+    if (cached){
+      console.log("Spiderable [CACHE] available: ", cached.url, cached.timestamp)
+      if (cached && cached.timestamp) {
+        let cacheAge = now - cached.timestamp
+        console.log("Spiderable [CACHE] age: " + Math.floor(cacheAge / 1000 / 60) + " minutes" )
+        if (cacheAge > maxAge) {
+          console.log("Spiderable [CACHE] too old, re-caching...")
+        } else {
+          console.log("Spiderable [CACHE] still fresh, returning cache..")
+          res.writeHead(200, {
+            'Content-Type': 'text/html; charset=UTF-8'
+          });
+          return res.end(cached.data);
+        }
+      }
+    } else {
+      console.log("Spiderable [CACHE] no cache")
+    }
     
     
     let processCount = 0
@@ -128,7 +172,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
           // console.log('stdout: ', stdout);
           processCount = parseInt(stdout)
           
-          console.log('stderr: ', stderr);
+          // console.log('stderr: ', stderr);
       })
       .catch(function (err) {
           console.error('ERROR: ', err);
@@ -139,18 +183,21 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     if (processCount > 1) {
       console.log('Spiderable [MAX REFUSE]')
 
-      res.writeHead(404, {
+      res.writeHead(409, {
         'Content-Type': 'text/html'
       });
-      return res.end('page not found')
+      return res.end('try again later')
 
     }
     
     
     try {
-
+      const browserFetcher = puppeteer.createBrowserFetcher();
+      const revisionInfo = await browserFetcher.download('869685');
+      // console.log("revisionInfo.executablePath: ", revisionInfo.executablePath)
       const browser = await puppeteer.launch({
-        timeout: parseInt(process.env.SPIDERABLE_TIMEOUT) || 2000,
+        executablePath: revisionInfo.executablePath,
+        timeout: parseInt(process.env.SPIDERABLE_TIMEOUT) || 10000,
         args: process.env.SPIDERABLE_ARGS ? JSON.parse(process.env.SPIDERABLE_ARGS) : [],
         headless: parseInt(process.env.SPIDERABLE_HEADLESS) || true
       })
@@ -167,7 +214,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
       try {
         
         const page = await browser.newPage()
-        await page.setDefaultTimeout(parseInt(process.env.SPIDERABLE_TIMEOUT)|| 2000)
+        await page.setDefaultTimeout(parseInt(process.env.SPIDERABLE_TIMEOUT)|| 10000)
         await page.setCacheEnabled(false)
         // don't load images
         await page.setRequestInterception(true)
@@ -182,16 +229,16 @@ WebApp.connectHandlers.use(async function(req, res, next) {
           console.log('ERROR:',preq1,preq2)
           page.close()
           browser.close()
-          res.writeHead(404, {
+          res.writeHead(409, {
             'Content-Type': 'text/html'
           });
-          return res.end('page not found')
+          return res.end('try again later')
         })
         
         await page.goto(url)
         
         try {
-          await page.waitFor(function(){
+          await page.waitForFunction(function(){
             if (typeof Meteor === 'undefined'
               || Meteor.status === undefined
               || !Meteor.status().connected) {
@@ -223,11 +270,42 @@ WebApp.connectHandlers.use(async function(req, res, next) {
             out = out.replace(/<script[^>]+>(.|\n|\r)*?<\/script\s*>/ig, '');
             out = out.replace('<meta name="fragment" content="!">', '');
             
-            // console.log("User-Agent: " + req.headers['user-agent'].toString())
-            res.writeHead(200, {
-              'Content-Type': 'text/html; charset=UTF-8'
-            });
-            res.end(out);
+            // search for iron router no route
+            let r = /no route on the client or the server for url/g
+            if (r.test(out)) {
+              console.log("Spiderable [NO ROUTE]")
+              SpiderableCache.remove({url:url.toString()})
+              res.writeHead(404, {
+                'Content-Type': 'text/html'
+              });
+              res.end('page not found')
+            } else {
+
+              // write to cache
+              let cacheData = {
+                url: url.toString(),
+                timestamp: new Date().valueOf(),
+                data: out
+              }
+              if (cached){
+                console.log("Spiderable [CACHE] updated for: ", url)
+                SpiderableCache.update({url:cacheData.url},{$set:cacheData})
+              } else {
+                console.log("Spiderable [CACHE] added for: ", url)
+                SpiderableCache.insert(cacheData)
+              }
+              
+              // console.log("User-Agent: " + req.headers['user-agent'].toString())
+              res.writeHead(200, {
+                'Content-Type': 'text/html; charset=UTF-8'
+              });
+              res.end(out);
+              // console.log(out)
+              
+            }
+            
+            
+            
           } else {
             console.log('no html')
             Meteor._debug("spiderable: puppeteer failed at " + url + ":");
@@ -242,11 +320,11 @@ WebApp.connectHandlers.use(async function(req, res, next) {
 
       } catch (e) {
 
-        console.log("Spiderable ["+browserPID+"] [ERROR]", browserPID)
-        res.writeHead(404, {
+        console.log("Spiderable ["+browserPID+"] [ERROR]", e)
+        res.writeHead(409, {
           'Content-Type': 'text/html'
         });
-        return res.end('page not found')
+        return res.end('try again later')
         
       } finally {
 
@@ -266,7 +344,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
       }
       
     } catch (e) {
-      console.log('SPIRABLE --- MAIN ERROR', e)
+      console.log('Spiderable --- MAIN ERROR', e)
     } finally {
       
     }
